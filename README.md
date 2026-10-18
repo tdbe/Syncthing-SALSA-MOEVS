@@ -22,6 +22,7 @@ Just paste the above command in Syncthing in your folder's settings under Extern
 ```
 
 Settings are re-read on every run. When you edit a file, it reloads settings.
+
 You can test first with `--dry-run --verbose` (and `--cleanup-only` to just run the pruners).
 
 ## Logging: 
@@ -35,11 +36,13 @@ The (non-debug) syncthing log will display only if there was a fatal error from 
 
 ## Quirks:
 
-Daylight savings: the timestamp appended to the filename inside .stversions (e.g., filename~20261019-005421.ext) is derived directly from the file's Modification Time (mtime). So theoretically at 3AM on DST day you could back up within 1h .stversions out of order.
+### Daylight savings: 
+The timestamp appended to the filename inside .stversions (e.g., filename~20261019-005421.ext) is derived directly from the file's Modification Time (mtime). So theoretically at 3AM on DST day you could back up within 1h .stversions out of order.
 
-Sub-second versions: The only non-syncthing-standard behaviour I have is that if a file gets edited and versioned more than once in the same second, I differentiate them with a `_number` after the timestamp (the version chains behaviour & sorting etc remains syncthing compliant):
+###Sub-second versions:
+The only non-syncthing-standard behaviour I have is that if a file gets edited and versioned more than once in the same second, I differentiate them with a `_number` after the timestamp (the version chains behaviour & sorting etc remains syncthing compliant):
 ```
-examples inside .stversions:
+Examples inside .stversions:
 pron~20251231-235905.txt
 pron~20251231-235905_1.txt
 pron~20251231-235905_2.txt
