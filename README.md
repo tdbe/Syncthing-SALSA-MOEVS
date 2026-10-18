@@ -39,7 +39,7 @@ The (non-debug) syncthing log will display only if there was a fatal error from 
 ### Daylight savings: 
 The timestamp appended to the filename inside .stversions (e.g., filename~20261019-005421.ext) is derived directly from the file's Modification Time (mtime). So theoretically at 3AM on DST day you could back up within 1h .stversions out of order.
 
-###Sub-second versions:
+### Sub-second versions:
 The only non-syncthing-standard behaviour I have is that if a file gets edited and versioned more than once in the same second, I differentiate them with a `_number` after the timestamp (the version chains behaviour & sorting etc remains syncthing compliant):
 ```
 Examples inside .stversions:
