@@ -13,11 +13,11 @@ The optional modules add what Syncthing's builtin versioning doesn't have: **ret
 ## Usage: 
 
 The exterenal versioning Syncthing command looks like this and can point to any custom settings file(s) to correspond with different synced folders:
-
+```
   python "/opt/Syncthing-salsa-moevs/syncthing_salsa_modular_external_versioner__main_script.py" "%FOLDER_PATH%" "%FILE_PATH%" --version-count-based-pruner-settings "./your_custom_syncthing_salsa_settings__version_count_based_pruner_05.txt"
-  
+``` 
 Just paste the above command in Syncthing in your folder's settings under External Versioning. Note you must leave the "%FOLDER_PATH%" "%FILE_PATH%" as is in the commmand, they are params supplied by syncthing to us here. And point to valid settings files (or leave those params blank and it uses the global files):
---main-settings "./syncthing_salsa_settings__main_script_01.txt" --version-count-based-pruner-settings "./syncthing_salsa_settings__version_count_based_pruner_01.txt" --time-based-pruner-settings "./syncthing_salsa_settings__time_based_pruner_01.txt" --total-size-based-pruner-settings "./syncthing_salsa_settings__stversions_total_size_pruner_01.txt"
+`--main-settings "./syncthing_salsa_settings__main_script_01.txt" --version-count-based-pruner-settings "./syncthing_salsa_settings__version_count_based_pruner_01.txt" --time-based-pruner-settings "./syncthing_salsa_settings__time_based_pruner_01.txt" --total-size-based-pruner-settings "./syncthing_salsa_settings__stversions_total_size_pruner_01.txt"`
 
 Settings are re-read on every run — edit a file, no Syncthing restart needed.
 Test first with `--dry-run --verbose` (and `--cleanup-only` to just run the pruners).
