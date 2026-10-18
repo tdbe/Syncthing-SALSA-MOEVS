@@ -12,7 +12,7 @@ The optional modules add what Syncthing's builtin versioning doesn't have: **ret
 
 ## Usage: 
 
-The exterenal versioning Syncthing command looks like this and can point to any custom settings file(s) to correspond with different synced folders:
+Download this repo and place it in a folder somewhere. Then paste this exterenal versioning Syncthing command which can also point to any custom settings file(s) to correspond with different synced folders:
 ```
   python "/opt/Syncthing-salsa-moevs/syncthing_salsa_modular_external_versioner__main_script.py" "%FOLDER_PATH%" "%FILE_PATH%" --version-count-based-pruner-settings "./your_custom_syncthing_salsa_settings__version_count_based_pruner_05.txt"
 ``` 
