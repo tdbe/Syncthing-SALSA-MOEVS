@@ -1,0 +1,11 @@
+# Until the total .stversions folder size is less than max size, it prunes the oldest files by creation date (on mac and windows) (on linux it might be the last modified date). Doesn't track version chains, only global age of all files in .stversions. 
+# You can reference different settings files for different Syncthing folders (check main script or readme for usage).
+# Format: KEY = VALUE, one per line. Blank lines and '#' comments are ignored
+# Booleans: true/false/yes/no/on/off/1/0. Don't use '#' in values.
+# This versioner and its pruners works even on syncthing Receive Encrypted folders. When restoring an encrypted stversion be sure to keep the folder structure of the specific file but remove the time stamp appended to the file name.
+
+ENABLED = true
+MAX_SIZE = 20GB
+MIN_KEEP_FILES = 1	# keep at least this many files in the .stversions folder even if it's larger than the MAX_SIZE. Doesn't identify version chains, it's not "x files per version chain" it's x files per total files in .stversions (you can use the version-based modules for that).
+
+# Note your versions might still be further pruned by other ENABLED pruner modules and their settings.

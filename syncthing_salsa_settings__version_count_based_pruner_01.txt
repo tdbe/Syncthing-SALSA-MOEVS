@@ -1,0 +1,10 @@
+# Operates per file version chain. Caps the maximum number of versions of a file to this many versions (deletes the oldest). It sorts files by name, because the timestamp format, appended to the otherwise unique file name, is equivalent to a sort by date.
+# You can reference different settings files for different Syncthing folders (check main script or readme for usage).
+# Format: KEY = VALUE, one per line. Blank lines and '#' comments are ignored
+# Booleans: true/false/yes/no/on/off/1/0. Don't use '#' in values.
+# This versioner and its pruners works even on syncthing Receive Encrypted folders. When restoring an encrypted stversion be sure to keep the folder structure of the specific file but remove the time stamp appended to the file name.
+
+ENABLED = true 		
+KEEP_VERSIONS = 2		
+
+# Note your versions might still be further pruned by other ENABLED pruner modules and their settings.
