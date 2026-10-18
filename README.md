@@ -2,11 +2,11 @@
 
 ## Standard-Agnostic Local-Space-Assuring Module-Optional External Versioning Script.
 
-Finally (and after 13 years) storage-size-aware simple-file-versioning for [Syncthing](https://syncthing.net). Python and cross platform Linux/Mac/Windows (but for now only tested on syncthing in windows).
+Finally (and after 13 years) a storage-size-aware simple-file-versioning script for [Syncthing](https://syncthing.net). Python and cross platform Linux/Mac/Windows (but for now only tested on syncthing in windows).
 
 This repo is tweaked, tested, iterated, read-through, architected by [me](https://github.com/tdbe) but slopped using Qwen 3.8 Flash Next 180B a6B Q4. Provided for free as-is (it's what I'm using, especially for Signal backups ([see syncthing ticket](https://github.com/syncthing/syncthing/issues/9581))).
 
-The optional modules add what Syncthing's builtin versioning doesn't have: **retention limits based on total archive size** — plus age and per-file version caps.
+The optional modules add what Syncthing's builtin versioning doesn't have: **retention limits based on total archive size**, plus age and per-file version caps.
 
 ### TODO: also make a sane (configurable) staggered versioning module
 
