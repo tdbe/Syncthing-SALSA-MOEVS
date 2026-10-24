@@ -57,6 +57,8 @@ tildes~are_fine.dots_too~20261231-235959_1.txt
 ### Cleanup Interval:
 Syncthing has a time value for its builtin Versioning systems, called "Cleanup Interval". Syncthing Salsa versioning doesn't have a schedule or interval to delay cleanup, it runs the cleanup right after receiving a new version. I can only imagine an interval being slightly necessary if you run on a very large folder that is updated very often and runs off a HDD. And even then the recently scanned clusters would be quickly re-accessible. For now I'd rather have all operations be self-contained per sync-event.
 
+Note: In case anyone doesn't know: versioning events are synchronous (not parallel), one event needs to finish successfully before the next starts. Syncthing stops the synced folder with an error otherwise.
+
 ## How it works
 
 Note: the file deletions are done with the `os.remove()` command - which is the equivalent of sending that file to trash and emptying that file from trash (aka unlinking or marking that file's space as reusable in the storage drive). The purpose is to save space, and it only runs on .stversions folders.
