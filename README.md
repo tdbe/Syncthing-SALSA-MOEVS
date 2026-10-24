@@ -56,6 +56,8 @@ tildes~are_fine.dots_too~20261231-235959_1.txt
 
 ## How it works
 
+Note: the file deletions are done with the `os.remove()` command - which is the equivalent of sending that file to trash and emptying that file from trash (aka unlinking or marking that file's space as reusable in the storage drive). The purpose is to save space, and it only runs on .stversions folders.
+
 When Syncthing is about to replace or delete a file due to a change coming
 from another device, it calls our script, which:
 
@@ -66,4 +68,4 @@ from another device, it calls our script, which:
 3. Runs the **time-based pruner**: Deletes the oldest files within .stversions, if they are older than DAYS. The date is the file creation time (I'm not parsing the file names for the timestamp, for speed reasons (we're listing the entire .stversions folder, not just one verion chain)). Keep a number `MIN_KEEP_FILES` even beyond the expiration date.
 4. Runs the **total-size pruner**: Until the total .stversions folder size is less than max size, it prunes the oldest files by creation date (on mac and windows) (on linux it might be the last modified date). Doesn't track version chains, only global age of all files in .stversions. Can also `MIN_KEEP_FILES`.
 
-These concurrent pruner modules work even on syncthing "Receive Encrypted" folders. When restoring an encrypted stversion be sure to keep the folder structure of the specific file but remove the time stamp appended to the file name.
+Note: These concurrent pruner modules work even on syncthing "Receive Encrypted" folders. When restoring an encrypted stversion be sure to keep the folder structure of the specific file but remove the time stamp appended to the file name.
