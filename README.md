@@ -55,7 +55,7 @@ tildes~are_fine.dots_too~20261231-235959_1.txt
 ```
 
 ### Cleanup Interval:
-Syncthing has a time value for its builtin Versioning systems, called "Cleanup Interval". Syncthing Salsa versioning doesn't have a schedule or interval to delay cleanup, it runs the cleanup right after receiving a new version. I can only imagine that being slightly necessary if you run on a very large folder that is updated very often and runs off a HDD. And even then the recently scanned clusters would be quickly re-accessible.
+Syncthing has a time value for its builtin Versioning systems, called "Cleanup Interval". Syncthing Salsa versioning doesn't have a schedule or interval to delay cleanup, it runs the cleanup right after receiving a new version. I can only imagine an interval being slightly necessary if you run on a very large folder that is updated very often and runs off a HDD. And even then the recently scanned clusters would be quickly re-accessible. For now I'd rather have all operations be self-contained per sync-event.
 
 ## How it works
 
