@@ -298,7 +298,6 @@ def prune(version_dir, settings_path='', dry_run=False, log=None):
         count_newest = min(max(count_newest, least_newest), n)
 
         # rules 2+3: oldest version per interval band / per tail bucket
-        last_boundary = boundaries[-1] if boundaries else 0.0
         oldest_in = {}                                   # bucket key -> index (newest-first walk -> final = oldest)
         for i in range(count_newest, n):
             age_days = (now - entries[i][0]).total_seconds() / 86400.0
@@ -310,8 +309,9 @@ def prune(version_dir, settings_path='', dry_run=False, log=None):
                     bucket = ('b', bi)
                     break
             if bucket is None:
+                # tail buckets are aligned at age zero (windows 0-EVERY_DAYS, EVERY_DAYS-2*EVERY_DAYS, ...)
                 # every_days <= 0 disables tail staggering: each version gets its own bucket (all survive this rule)
-                bucket = ('t', int((age_days - last_boundary) // every_days)) if every_days > 0 else ('t', i)
+                bucket = ('t', int(age_days // every_days)) if every_days > 0 else ('t', i)
             oldest_in[bucket] = i
 
         # rule 4: fit the interval/tail survivors into the oldest budget, newest survivor first, floor KEEP_AT_LEAST_OLDEST
