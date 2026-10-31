@@ -6,7 +6,7 @@ Finally (and after 13 years) a storage-size-aware and actually customizable file
 
 Covers not just Simple file versioning, but also a sane (actually configurable, damnit) [Staggered](https://docs.syncthing.net/users/versioning.html#staggered-file-versioning) file versioning scheme.
 
-These modules (can be combine and) enable what Syncthing's builtin versioning doesn't have: **retention limits based on version-chain size or total size**, plus other time window and age and per-file version settings.
+These modules (can be combined and) enable what Syncthing's builtin versioning doesn't have: **retention limits based on version-chain size or total size**, plus other time window and age and per-file version settings.
 
 This repo is tweaked, tested, iterated, read-through, architected by [me](https://github.com/tdbe) but slopped using Qwen 3.8 Flash Next 180B a6B Q4. Provided for free as-is (it's what I'm using, especially for Signal backups ([see syncthing ticket](https://github.com/syncthing/syncthing/issues/9581))).
 
