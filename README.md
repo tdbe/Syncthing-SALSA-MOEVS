@@ -10,17 +10,6 @@ These modules (can be combined and) enable what Syncthing's builtin versioning d
 
 This repo is tweaked, tested, iterated, read-through, architected by [me](https://github.com/tdbe) but slopped using Qwen 3.8 Flash Next 180B a6B Q4. Provided for free as-is (it's what I'm using, especially for Signal backups ([see syncthing ticket](https://github.com/syncthing/syncthing/issues/9581))). It's only in charge of the .stversions subfolder(s) of your synced syncthing folder(s), and works even with Receive-Encrypted file versions.
 
-### The Staggered Versioning module (a customizable replacement for Syncthing's builtin "Staggered File Versioning"):
-
-Per file version chain, versions are aged by the `~YYYYMMDD-hhmmss` timestamp in their name and then:
-
-1. **Newest group**: the newest `KEEP_NEWEST` versions are always kept regardless of the rules below - but only as many of them as fit within `TOTAL_SIZE_OF_NEWEST_VERSIONS`, never fewer than `KEEP_AT_LEAST_NEWEST`.
-2. **Your own intervals** instead of Syncthing's fixed 1h/1d/30d: `INTERVALS_DAYS` is a comma-separated list of cumulative day boundaries (e.g. `0.5, 60` = the first half day, then up to 60 days). The oldest version landing in each interval is kept.
-3. **Tail until maximum age**: past the last interval, the oldest version in every `EVERY_DAYS` bucket is kept (`EVERY_DAYS <= 0` disables tail staggering). Older than `MAX_AGE` days gets deleted; `MAX_AGE = 0` keeps forever whatever survived the intervals and tail.
-4. **Oldest group size budget**: everything rules 2 and 3 kept must fit within one per-file `TOTAL_SIZE_OF_OLDEST_VERSIONS` (walking from the newest survivor down), never fewer than `KEEP_AT_LEAST_OLDEST`.
-
-If a single version is bigger than both size budgets and both `KEEP_AT_LEAST_*` are 0, no versions of that file are kept at all.
-
 ## Usage: 
 
 Download this repo and place it in a folder anywhere. Then go to one of your Syncthing Folders settings in the Syncthing GUI and paste this command in the Exterenal Versioning field. You can also point to any custom settings file(s) to correspond with different synced folders:
@@ -82,7 +71,7 @@ from another device, it calls our script, which:
    Subfolder structure is mirrored.
 2. Runs the **version-count pruner**: Operates per file version chain. Caps the maximum number of versions of a file to this many versions (deletes the oldest). It sorts files by name, because the timestamp format, appended to the otherwise unique file name, is equivalent to a sort by date.
 3. Runs the **time-based pruner**: Deletes the oldest files within .stversions, if they are older than DAYS. The date is the file creation time (I'm not parsing the file names for the timestamp, for speed reasons (we're listing the entire .stversions folder, not just one verion chain)). Keep a number `MIN_KEEP_FILES` even beyond the expiration date.
-4. Runs the **staggered pruner**: Syncthing's builtin staggered versioning redone to your spec - per version chain it keeps the newest x versions always, the oldest version in each of your own day-intervals and X-days tail buckets, all under per-file size budgets (see the module section above).
+4. Runs the **staggered pruner**: A customizable version of Syncthing's builtin [Staggered](https://docs.syncthing.net/users/versioning.html#staggered-file-versioning) versioning. Per version-chain, keeps the newest x versions always, the oldest version in each of your own day-interval buckets and a final bucket, all under optional size budgets.
 5. Runs the **total-size pruner**: Until the total .stversions folder size is less than max size, it prunes the oldest files by creation date (on mac and windows) (on linux it might be the last modified date). Doesn't track version chains, only global age of all files in .stversions. Can also `MIN_KEEP_FILES`.
 
 Note: These concurrent pruner modules work even on syncthing "Receive Encrypted" folders. When restoring an encrypted stversion be sure to keep the folder structure of the specific file but remove the time stamp appended to the file name.
