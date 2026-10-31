@@ -14,7 +14,9 @@ Syncthing runs this right before replacing/deleting a file that changed on anoth
   2. syncthing_salsa_module__version_count_based_pruner.py: keep at most KEEP_VERSIONS newest
      versions per file chain.
   3. syncthing_salsa_module__time_based_pruner.py: delete versions older than DAYS.
-  4. syncthing_salsa_module__stversions_total_size_pruner.py: if the archive still exceeds MAX_SIZE, 
+  4. syncthing_salsa_module__staggered_pruner.py: your own staggered versioning schedule (keep the newest x always,
+     the oldest version per custom day-interval and per X-days tail bucket, with per-file size budgets).
+  5. syncthing_salsa_module__stversions_total_size_pruner.py: if the archive still exceeds MAX_SIZE, 
      delete oldest-first until back under the cap.
 
 The system-log output goes to the Windows Application event log or (Linux/macOS) syslog via 'logger'; popups
@@ -23,6 +25,7 @@ use WScript.Shell / osascript / zenity / kdialog.
 Settings live in plain-text 'KEY = VALUE' files, one per script:
     syncthing_salsa_settings__main_script_01.txt
     syncthing_salsa_settings__time_based_pruner_01.txt
+    syncthing_salsa_settings__staggered_pruner_01.txt
     syncthing_salsa_settings__stversions_total_size_pruner_01.txt
     syncthing_salsa_settings__version_count_based_pruner_01.txt
 Settings files are looked up next to this script by default.
@@ -32,7 +35,7 @@ Usage: The Syncthing command looks like this and can point to any custom setting
   python "/opt/Syncthing-salsa-moevs/syncthing_salsa_modular_external_versioner__main_script.py" "%FOLDER_PATH%" "%FILE_PATH%" --version-count-based-pruner-settings "./your_custom_syncthing_salsa_settings__version_count_based_pruner_05.txt"
   
 Just paste the above command in Syncthing in your folder's settings under External Versioning. Note you must leave the "%FOLDER_PATH%" "%FILE_PATH%" as is in the commmand, they are params supplied by syncthing to us here. And point to valid settings files (or leave those params blank and it uses the global files):
---main-settings "./syncthing_salsa_settings__main_script_01.txt" --version-count-based-pruner-settings "./syncthing_salsa_settings__version_count_based_pruner_01.txt" --time-based-pruner-settings "./syncthing_salsa_settings__time_based_pruner_01.txt" --total-size-based-pruner-settings "./syncthing_salsa_settings__stversions_total_size_pruner_01.txt"
+--main-settings "./syncthing_salsa_settings__main_script_01.txt" --version-count-based-pruner-settings "./syncthing_salsa_settings__version_count_based_pruner_01.txt" --time-based-pruner-settings "./syncthing_salsa_settings__time_based_pruner_01.txt" --staggered-pruner-settings "./syncthing_salsa_settings__staggered_pruner_01.txt" --total-size-based-pruner-settings "./syncthing_salsa_settings__stversions_total_size_pruner_01.txt"
 
 Relative settings paths resolve against THIS SCRIPT's folder (Syncthing'sworking directory is unpredictable); 
 absolute paths are used as-is. 
@@ -51,6 +54,7 @@ import time
 
 import syncthing_salsa_module__version_count_based_pruner
 import syncthing_salsa_module__time_based_pruner
+import syncthing_salsa_module__staggered_pruner
 import syncthing_salsa_module__stversions_total_size_pruner
 from syncthing_salsa_module__stversions_total_size_pruner import fmt_size
 
@@ -69,6 +73,8 @@ MAIN_SETTINGS_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_main_setting
 version_count_based_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_prune_version_count_based_pruner_settings.txt')
 
 time_based_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_syncthing_salsa_module__time_based_pruner_settings.txt')
+
+staggered_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_prune_staggered_pruner_settings.txt')
 
 total_size_based_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_prune_total_total_size_based_pruner_settings.txt')
 
@@ -255,6 +261,7 @@ def main(argv):
     ap.add_argument('--main-settings',     default='', help='override the main script settings file path')
     ap.add_argument('--version-count-based-pruner-settings', default='', help='override the version count based pruner settings file path')
     ap.add_argument('--time-based-pruner-settings',     default='', help='override the version age based pruner settings file path')
+    ap.add_argument('--staggered-pruner-settings',     default='', help='override the staggered versioning pruner settings file path')
     ap.add_argument('--total-size-based-pruner-settings',     default='', help='override the stversions total size based pruner settings file path')
     ap.add_argument('--cleanup-only', action='store_true', help='only run the pruners')
     ap.add_argument('--dry-run', action='store_true', help='test run without doing any actual file operations')
@@ -355,6 +362,8 @@ def main(argv):
         
         tbp_path = resolve_settings_path(args.time_based_pruner_settings) if args.time_based_pruner_settings else time_based_pruner_settings_PATH
         
+        stgp_path = resolve_settings_path(args.staggered_pruner_settings) if args.staggered_pruner_settings else staggered_pruner_settings_PATH
+        
         tsbp_path = resolve_settings_path(args.total_size_based_pruner_settings) if args.total_size_based_pruner_settings else total_size_based_pruner_settings_PATH
 
         # 5. run the pruner modules in order
@@ -364,15 +373,18 @@ def main(argv):
         deleted2, freed2 = syncthing_salsa_module__time_based_pruner.prune(version_dir, 
         settings_path=tbp_path, dry_run=args.dry_run, log=log)
         
+        deleted4, freed4 = syncthing_salsa_module__staggered_pruner.prune(version_dir, 
+        settings_path=stgp_path, dry_run=args.dry_run, log=log)
+        
         deleted3, freed3, total, count = syncthing_salsa_module__stversions_total_size_pruner.prune(version_dir, 
         settings_path=tsbp_path, dry_run=args.dry_run, log=log)
 
-        if (deleted1 + deleted2 + deleted3) and not args.dry_run:
+        if (deleted1 + deleted2 + deleted3 + deleted4) and not args.dry_run:
             remove_empty_dirs(version_dir)
 
-        log('OK      %s -> archive %s in %d file(s); version-count pruned %d (%s), time pruned %d (%s), total-size pruned %d (%s)'
+        log('OK      %s -> archive %s in %d file(s); version-count pruned %d (%s), time pruned %d (%s), staggered pruned %d (%s), total-size pruned %d (%s)'
             % (rel or '(cleanup only)', fmt_size(total), count,
-               deleted1, fmt_size(freed1), deleted2, fmt_size(freed2), deleted3, fmt_size(freed3)))
+               deleted1, fmt_size(freed1), deleted2, fmt_size(freed2), deleted4, fmt_size(freed4), deleted3, fmt_size(freed3)))
     except Exception as exc: # noqa: BLE001 - never crash on Syncthing
         log('ERROR %s' % exc)
         print('syncthing-salsa-versioner: %s' % exc, file=sys.stderr)
