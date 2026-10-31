@@ -2,7 +2,7 @@
 
 ## Standard-Agnostic Local-Space-Assuring Module-Optional External Versioning Script.
 
-Finally (and after 13 years) a storage-size-aware file-versioning script for [Syncthing](https://syncthing.net). Python and cross platform Linux/Mac/Windows (but for now only tested on syncthing in windows).
+Finally (and after 13 years) a storage-size-aware and actually customizable file-versioning script for [Syncthing](https://syncthing.net). Python and cross platform Linux/Mac/Windows (but for now only tested on syncthing in windows).
 
 Covers not just Simple file versioning, but also a sane (actually configurable, damnit) [Staggered](https://docs.syncthing.net/users/versioning.html#staggered-file-versioning) file versioning scheme.
 
