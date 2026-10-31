@@ -1,0 +1,33 @@
+# Settings for syncthing_salsa_module__staggered_pruner.py
+# A customizable re-implementation of Syncthing's builtin "Staggered File Versioning"; per file version chains that can:
+# - keep the newest x versions always, with an optional per-version-chain TOTAL_SIZE pruning setting as well,
+# - then define intervals (in days (also 0.5 days)) for each keeping the OLDEST version, with a second optional per-version-chain TOTAL_SIZE pruning setting,
+# - and after that, the oldest version in every z-days bucket until a maximum age (or size).
+#
+# You can reference different settings files for different Syncthing folders (check main script or readme for usage).
+# Format: KEY = VALUE, one per line. Blank lines and '#' comments are ignored
+# Booleans: true/false/yes/no/on/off/1/0. Don't use '#' in values.
+# This versioner and its pruners works even on syncthing Receive Encrypted folders. When restoring an encrypted stversion be sure to keep the folder structure of the specific file but remove the time stamp appended to the file name.
+
+ENABLED = false
+
+# Rule 1 - the 'NEWEST' group: the newest KEEP_NEWEST number of versions of a file are always kept, regardless of the interval rules below (but still subject to the TOTAL_SIZE_OF_NEWEST_VERSIONS size budget).
+KEEP_NEWEST = 2						# default: 2
+TOTAL_SIZE_OF_NEWEST_VERSIONS =			# max total size of ALL VERSIONS OF A FILE counted in the 'NEWEST' group, walking from the newest version ('' = no size limit, e.g. 2GB, 500MB)
+KEEP_AT_LEAST_NEWEST = 1				# default: 1. Never drop the 'NEWEST' group below this many versions
+
+# Rule 2 - use your own staggered intervals instead of Syncthing's fixed 1h/1d/30d: comma-separated CUMULATIVE day boundaries. Example: for '0.5, 7' we keep the oldest version within the first half day, then the oldest version between half a day and 7 days. A version chain so far would look like this (ignoring the size budget setting, and ignoring Rule 3): [version_newest1] [version_newest2] [version_interval_05] [version_interval_7] [version_previous_interval_7_(8-16days)] [version_previous_previous_interval_7_(16-24days)]
+INTERVALS_DAYS = 0.5, 7					# Positive values below MIN_STAGGER_DAYS (default ~1h) are clamped to up to MIN_STAGGER_DAYS.
+MIN_STAGGER_DAYS = 0.04165				# default ~1h: positive INTERVALS_DAYS entries (and EVERY_DAYS) below this are clamped up to it; <= 0 disables the floor (version-name timestamps only have second resolution anyway, and tiny buckets just bloat the archive)
+
+# Rule 3 - the tail end (like Syncthing's "oldest per week until Maximum Age"): past the last interval boundary from Rule 2, keep the oldest version in a EVERY_DAYS interval. If EVERY_DAYS <= 0, everything goes according to the last interval entry of Rule 2, but MAX_AGE still applies unless it is 0. 
+# A version chain so far would become like this (ignoring the size budget settings): [version_newest1] [version_newest2] [version_interval_05] [version_interval_7] [version_interval_30] [version_previous_interval_30_(31-60)] [... up to 400 days]
+EVERY_DAYS = 30							# default: 30
+MAX_AGE = 400							# delete versions older than this many days; 0 = keep forever whatever survives past the last interval/tail rule
+
+# Size Budget Rule for 2 and 3. (shared by rules 2 and 3): the oldest survivors that no longer fit are deleted.
+TOTAL_SIZE_OF_OLDEST_VERSIONS =			# ('' = no size limit, e.g. 5GB, 500MB)
+KEEP_AT_LEAST_OLDEST = 1				# never drop the oldest group below this many versions, even if it exceeds TOTAL_SIZE_OF_OLDEST_VERSIONS or everything aged past MAX_AGE. Also, if set to 0, a version that is or becomes too big for the size budget, keeps zero old versions!
+
+# Note: if a single version is bigger than both TOTAL_SIZE_OF_* budgets, and both KEEP_AT_LEAST_* are 0, NO versions of that file are kept.
+# Note your versions might still be further pruned by other ENABLED pruner modules and their settings.
