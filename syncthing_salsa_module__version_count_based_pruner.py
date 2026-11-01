@@ -95,17 +95,24 @@ def split_version_name(name):
     return name[:tilde], name[tilde + 1:dot], name[dot:]
 
 
-def prune(version_dir, settings_path='', dry_run=False, log=None):
-    """Enforce KEEP_VERSIONS per chain. Returns (deleted, freed_bytes)."""
+def prune(version_dir, settings_path='', dry_run=False, log=None, settings_errors=None):
+    """Enforce KEEP_VERSIONS per chain. Returns (deleted, freed_bytes).
+    Optional settings_errors list also receives the load/parse problem messages."""
     log = log if log else (lambda message, level='': None)
+    if settings_errors is None:
+        settings_errors = []
+
+    def slog(message): # settings problems: normal logging AND collected for the caller's popup
+        log(message)
+        settings_errors.append(message)
 
     settings = load_settings(settings_path) if settings_path else {}
     if settings is None:
-        log('WARN  per-file: settings file not found: %s (using defaults)' % settings_path)
+        slog('WARN  per-file: settings file not found: %s (using defaults)' % settings_path)
         settings = {}
-    enabled = _get_bool(settings, 'ENABLED', DEFAULT_ENABLED, log)
-    keep    = _get_int(settings, 'KEEP_VERSIONS', DEFAULT_KEEP_VERSIONS, log)
-    _warn_unknown(settings, ('ENABLED', 'KEEP_VERSIONS'), 'per-file', log)
+    enabled = _get_bool(settings, 'ENABLED', DEFAULT_ENABLED, slog)
+    keep    = _get_int(settings, 'KEEP_VERSIONS', DEFAULT_KEEP_VERSIONS, slog)
+    _warn_unknown(settings, ('ENABLED', 'KEEP_VERSIONS'), 'per-file', slog)
 
     if not enabled:
         log('  per-file: disabled', 'verbose')

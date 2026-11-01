@@ -68,15 +68,15 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Default settings file locations (relative to this script). The Syncthing
 # command can override each with --main-settings / --version-count-based-pruner-settings /
 # --time-based-pruner-settings / --total-size-based-pruner-settings params.
-MAIN_SETTINGS_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_main_settings.txt')
+MAIN_SETTINGS_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_salsa_settings__main_script_01.txt')
 
-version_count_based_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_prune_version_count_based_pruner_settings.txt')
+version_count_based_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_salsa_settings__version_count_based_pruner_01.txt')
 
-time_based_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_syncthing_salsa_module__time_based_pruner_settings.txt')
+time_based_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_salsa_settings__time_based_pruner_01.txt')
 
-staggered_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_prune_staggered_pruner_settings.txt')
+staggered_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_salsa_settings__staggered_pruner_01.txt')
 
-total_size_based_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_versioner_prune_total_total_size_based_pruner_settings.txt')
+total_size_based_pruner_settings_PATH = os.path.join(_SCRIPT_DIR, 'syncthing_salsa_settings__stversions_total_size_pruner_01.txt')
 
 # Fallback defaults, used only if the main settings file is missing/incomplete.
 LOG_FILE = '' # '' = no file logging
@@ -177,27 +177,29 @@ def _system_log(message):
         pass  # logging must never break versioning
 
 
-def _popup(message):
+def _popup(message, title=None):
     """Fire-and-forget popup, auto-closes after 10 min. Never waited on.
     Windows: WScript.Shell.Popup | macOS: osascript | Linux: zenity/kdialog."""
+    if title is None:
+        title = LOG_PREFIX
     try:
         if IS_WINDOWS:
             ps = "(New-Object -ComObject WScript.Shell).Popup('%s', 6000, '%s', 0)" \
-                 % (_ps_quote(message), _ps_quote(LOG_PREFIX))
+                 % (_ps_quote(message), _ps_quote(title))
             subprocess.Popen(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', ps],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              creationflags=_NO_WINDOW)
         elif IS_MACOS:
             script = 'display dialog "%s" with title "%s" buttons {"OK"} giving up after 6000' \
-                     % (_osa_quote(message), _osa_quote(LOG_PREFIX))
+                     % (_osa_quote(message), _osa_quote(title))
             subprocess.Popen(['osascript', '-e', script],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         else:  # Linux and other unixes
             if shutil.which('zenity'):
-                cmd = ['zenity', '--info', '--title=%s' % LOG_PREFIX,
+                cmd = ['zenity', '--info', '--title=%s' % title,
                        '--timeout=600', '--text=%s' % message]
             elif shutil.which('kdialog'):
-                cmd = ['kdialog', '--title', LOG_PREFIX, '--passivepopup', message, '6000']
+                cmd = ['kdialog', '--title', title, '--passivepopup', message, '6000']
             else:
                 return  # no popup tool (headless) - silently skip
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -269,7 +271,13 @@ def main(argv):
     args = ap.parse_args(argv)
 
     # 1. main settings (stderr warnings only - the log itself isn't configured yet)
-    warn = lambda msg: print('syncthing-salsa-versioner: %s' % msg, file=sys.stderr)
+    settings_problems = [] # [(settings file path, [problem messages])] for the mandatory settings-error popup
+    main_errs = []
+
+    def warn(msg):
+        print('syncthing-salsa-versioner: %s' % msg, file=sys.stderr)
+        main_errs.append(msg)
+
     main_path = resolve_settings_path(args.main_settings) if args.main_settings else MAIN_SETTINGS_PATH
     settings = load_settings(main_path)
     if settings is None:
@@ -283,6 +291,20 @@ def main(argv):
     _warn_unknown(settings, ('LOG_FILE', 'VERBOSE', 'OUTPUT_TO_SYSTEM_LOG',
                              'OUTPUT_TO_POPUP_MESSAGE', 'LOG_PREFIX'), 'main', warn)
     VERBOSE = VERBOSE or args.verbose # an explicit --verbose arg always wins
+    for m in main_errs: # now that logging is configured, emit the main-settings problems through it too
+        log(m)
+    settings_problems.append((main_path, main_errs))
+
+    def popup_settings_errors():
+        """Mandatory (non-optional) cross-platform popup listing every settings file
+        problem (missing file / parse error) encountered this run. One popup, all files."""
+        if not any(msgs for _path, msgs in settings_problems):
+            return
+        lines = []
+        for path, msgs in settings_problems:
+            for m in msgs:
+                lines.append('%s: %s' % (path, m.replace('WARN  ', '', 1).replace('ERROR ', '', 1)))
+        _popup('\n'.join(lines), LOG_PREFIX + ' ERROR:')
 
     # 2. what file did Syncthing hand us to version?
     tokens = [t for t in args.tokens if t and t.strip()]
@@ -367,17 +389,21 @@ def main(argv):
         tsbp_path = resolve_settings_path(args.total_size_based_pruner_settings) if args.total_size_based_pruner_settings else total_size_based_pruner_settings_PATH
 
         # 5. run the pruner modules in order
+        vcbp_errs, tbp_errs, stgp_errs, tsbp_errs = [], [], [], []
         deleted1, freed1 = syncthing_salsa_module__version_count_based_pruner.prune(version_dir, 
-        settings_path=vcbp_path, dry_run=args.dry_run, log=log)
+        settings_path=vcbp_path, dry_run=args.dry_run, log=log, settings_errors=vcbp_errs)
         
         deleted2, freed2 = syncthing_salsa_module__time_based_pruner.prune(version_dir, 
-        settings_path=tbp_path, dry_run=args.dry_run, log=log)
+        settings_path=tbp_path, dry_run=args.dry_run, log=log, settings_errors=tbp_errs)
         
         deleted4, freed4 = syncthing_salsa_module__staggered_pruner.prune(version_dir, 
-        settings_path=stgp_path, dry_run=args.dry_run, log=log)
+        settings_path=stgp_path, dry_run=args.dry_run, log=log, settings_errors=stgp_errs)
         
         deleted3, freed3, total, count = syncthing_salsa_module__stversions_total_size_pruner.prune(version_dir, 
-        settings_path=tsbp_path, dry_run=args.dry_run, log=log)
+        settings_path=tsbp_path, dry_run=args.dry_run, log=log, settings_errors=tsbp_errs)
+
+        settings_problems.extend([(vcbp_path, vcbp_errs), (tbp_path, tbp_errs),
+                                  (stgp_path, stgp_errs), (tsbp_path, tsbp_errs)])
 
         if (deleted1 + deleted2 + deleted3 + deleted4) and not args.dry_run:
             remove_empty_dirs(version_dir)
@@ -385,10 +411,12 @@ def main(argv):
         log('OK      %s -> archive %s in %d file(s); version-count pruned %d (%s), time pruned %d (%s), staggered pruned %d (%s), total-size pruned %d (%s)'
             % (rel or '(cleanup only)', fmt_size(total), count,
                deleted1, fmt_size(freed1), deleted2, fmt_size(freed2), deleted4, fmt_size(freed4), deleted3, fmt_size(freed3)))
+        popup_settings_errors()
     except Exception as exc: # noqa: BLE001 - never crash on Syncthing
         log('ERROR %s' % exc)
         print('syncthing-salsa-versioner: %s' % exc, file=sys.stderr)
         fail = True
+        popup_settings_errors()
 
     return 1 if fail else 0
 

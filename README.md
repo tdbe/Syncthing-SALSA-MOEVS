@@ -33,6 +33,8 @@ The (non-debug) syncthing log will display only if there was a fatal error from 
 - OS Shell popup: Windows: WScript.Shell.Popup; macOS: osascript; Linux: zenity/kdialog.
 - a `--verbose` flag, otherwise it's just one line logged per run.
 
+Independent of all those (and not optional): if a settings file could not be loaded or contains parse errors, you always get one popup per run titled "[LOG_PREFIX] ERROR:" listing which settings file(s) had which problem(s).
+
 
 ## Quirks:
 

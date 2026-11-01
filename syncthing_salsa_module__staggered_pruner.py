@@ -216,31 +216,38 @@ def parse_stamp(stamp):
 
 # ----------------------------------------------------------------------
 
-def prune(version_dir, settings_path='', dry_run=False, log=None):
+def prune(version_dir, settings_path='', dry_run=False, log=None, settings_errors=None):
     """Enforce the staggered schedule + per-chain size budgets.
-    Returns (deleted, freed_bytes)."""
+    Returns (deleted, freed_bytes).
+    Optional settings_errors list also receives the load/parse problem messages."""
     log = log if log else (lambda message, level='': None)
+    if settings_errors is None:
+        settings_errors = []
+
+    def slog(message): # settings problems: normal logging AND collected for the caller's popup
+        log(message)
+        settings_errors.append(message)
 
     settings = load_settings(settings_path) if settings_path else {}
     if settings is None:
-        log('WARN  staggered: settings file not found: %s (using defaults)' % settings_path)
+        slog('WARN  staggered: settings file not found: %s (using defaults)' % settings_path)
         settings = {}
-    enabled       = _get_bool(settings, 'ENABLED', DEFAULT_ENABLED, log)
-    keep_newest   = _get_int(settings, 'KEEP_NEWEST', DEFAULT_KEEP_NEWEST, log)
-    newest_budget = _parse_budget(settings, 'TOTAL_SIZE_OF_NEWEST_VERSIONS', log)
-    least_newest  = _get_int(settings, 'KEEP_AT_LEAST_NEWEST', DEFAULT_KEEP_AT_LEAST_NEWEST, log)
-    min_stagger   = _get_float(settings, 'MIN_STAGGER_DAYS', DEFAULT_MIN_STAGGER_DAYS, log)
+    enabled       = _get_bool(settings, 'ENABLED', DEFAULT_ENABLED, slog)
+    keep_newest   = _get_int(settings, 'KEEP_NEWEST', DEFAULT_KEEP_NEWEST, slog)
+    newest_budget = _parse_budget(settings, 'TOTAL_SIZE_OF_NEWEST_VERSIONS', slog)
+    least_newest  = _get_int(settings, 'KEEP_AT_LEAST_NEWEST', DEFAULT_KEEP_AT_LEAST_NEWEST, slog)
+    min_stagger   = _get_float(settings, 'MIN_STAGGER_DAYS', DEFAULT_MIN_STAGGER_DAYS, slog)
     if min_stagger < 0:
         min_stagger = 0.0
-    boundaries    = _parse_intervals(settings.get('INTERVALS_DAYS', DEFAULT_INTERVALS_DAYS), min_stagger, log)
-    every_days    = _get_float(settings, 'EVERY_DAYS', DEFAULT_EVERY_DAYS, log)
-    max_age       = _get_float(settings, 'MAX_AGE', DEFAULT_MAX_AGE, log)
-    oldest_budget = _parse_budget(settings, 'TOTAL_SIZE_OF_OLDEST_VERSIONS', log)
-    least_oldest  = _get_int(settings, 'KEEP_AT_LEAST_OLDEST', DEFAULT_KEEP_AT_LEAST_OLDEST, log)
+    boundaries    = _parse_intervals(settings.get('INTERVALS_DAYS', DEFAULT_INTERVALS_DAYS), min_stagger, slog)
+    every_days    = _get_float(settings, 'EVERY_DAYS', DEFAULT_EVERY_DAYS, slog)
+    max_age       = _get_float(settings, 'MAX_AGE', DEFAULT_MAX_AGE, slog)
+    oldest_budget = _parse_budget(settings, 'TOTAL_SIZE_OF_OLDEST_VERSIONS', slog)
+    least_oldest  = _get_int(settings, 'KEEP_AT_LEAST_OLDEST', DEFAULT_KEEP_AT_LEAST_OLDEST, slog)
     _warn_unknown(settings, ('ENABLED', 'KEEP_NEWEST', 'TOTAL_SIZE_OF_NEWEST_VERSIONS',
                              'KEEP_AT_LEAST_NEWEST', 'MIN_STAGGER_DAYS', 'INTERVALS_DAYS',
                              'EVERY_DAYS', 'MAX_AGE', 'TOTAL_SIZE_OF_OLDEST_VERSIONS',
-                             'KEEP_AT_LEAST_OLDEST'), 'staggered', log)
+                             'KEEP_AT_LEAST_OLDEST'), 'staggered', slog)
 
     if not enabled:
         log('  staggered: disabled', 'verbose')
@@ -251,14 +258,14 @@ def prune(version_dir, settings_path='', dry_run=False, log=None):
     if max_age < 0:
         max_age = 0.0
     if 0 < min_stagger and 0 < every_days < min_stagger:
-        log('WARN  staggered: EVERY_DAYS %s below the MIN_STAGGER_DAYS floor - treated as %s days' % (every_days, min_stagger))
+        slog('WARN  staggered: EVERY_DAYS %s below the MIN_STAGGER_DAYS floor - treated as %s days' % (every_days, min_stagger))
         every_days = min_stagger
 
-    log('  staggered: intervals %s days, tail every %s day(s), max age %s, newest keep %d (%s budget), oldest budget %s, floors %d/%d, stagger floor %s'
+    log('  staggered: intervals: %s days, tail end: every %s day(s), max age: %s, newest keep %d (newest versions size budget: %s), oldest versions size budget: %s, keep at least %d newest versions, keep at least %d oldest versions, stagger clamp minimum %s'
         % (boundaries if boundaries else '(none)', every_days,
            ('%g day(s)' % max_age) if max_age > 0 else 'forever',
-           keep_newest, fmt_size(newest_budget) if newest_budget is not None else 'no',
-           fmt_size(oldest_budget) if oldest_budget is not None else 'none',
+           keep_newest, fmt_size(newest_budget) if newest_budget is not None else 'infinite',
+           fmt_size(oldest_budget) if oldest_budget is not None else 'infinite',
            least_newest, least_oldest,
            ('%g day(s)' % min_stagger) if min_stagger > 0 else 'off'), 'verbose')
 

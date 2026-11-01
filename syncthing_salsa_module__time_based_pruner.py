@@ -85,18 +85,25 @@ def creation_time(st):
               moment, which is the ordering we want anyway)."""
     return getattr(st, 'st_birthtime', st.st_ctime)
 
-def prune(version_dir, settings_path='', dry_run=False, log=None):
-    """Delete files older than DAYS. Returns (deleted, freed_bytes)."""
+def prune(version_dir, settings_path='', dry_run=False, log=None, settings_errors=None):
+    """Delete files older than DAYS. Returns (deleted, freed_bytes).
+    Optional settings_errors list also receives the load/parse problem messages."""
     log = log if log else (lambda message, level='': None)
+    if settings_errors is None:
+        settings_errors = []
+
+    def slog(message): # settings problems: normal logging AND collected for the caller's popup
+        log(message)
+        settings_errors.append(message)
 
     settings = load_settings(settings_path) if settings_path else {}
     if settings is None:
-        log('WARN  time: settings file not found: %s (using defaults)' % settings_path)
+        slog('WARN  time: settings file not found: %s (using defaults)' % settings_path)
         settings = {}
-    enabled  = _get_bool(settings, 'ENABLED', DEFAULT_ENABLED, log)
-    days     = _get_int(settings, 'DAYS', DEFAULT_DAYS, log)
-    min_keep = _get_int(settings, 'MIN_KEEP_FILES', DEFAULT_MIN_KEEP_FILES, log)
-    _warn_unknown(settings, ('ENABLED', 'DAYS', 'MIN_KEEP_FILES'), 'time', log)
+    enabled  = _get_bool(settings, 'ENABLED', DEFAULT_ENABLED, slog)
+    days     = _get_int(settings, 'DAYS', DEFAULT_DAYS, slog)
+    min_keep = _get_int(settings, 'MIN_KEEP_FILES', DEFAULT_MIN_KEEP_FILES, slog)
+    _warn_unknown(settings, ('ENABLED', 'DAYS', 'MIN_KEEP_FILES'), 'time', slog)
 
     if not enabled:
         log('  time: disabled', 'verbose')

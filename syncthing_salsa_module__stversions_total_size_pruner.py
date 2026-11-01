@@ -106,18 +106,25 @@ def creation_time(st):
               moment, which is the ordering we want anyway)."""
     return getattr(st, 'st_birthtime', st.st_ctime)
 
-def prune(version_dir, settings_path='', dry_run=False, log=None):
-    """Enforce MAX_SIZE. Returns (deleted, freed, total_after, count_after)."""
+def prune(version_dir, settings_path='', dry_run=False, log=None, settings_errors=None):
+    """Enforce MAX_SIZE. Returns (deleted, freed, total_after, count_after).
+    Optional settings_errors list also receives the load/parse problem messages."""
     log = log if log else (lambda message, level='': None)
+    if settings_errors is None:
+        settings_errors = []
+
+    def slog(message): # settings problems: normal logging AND collected for the caller's popup
+        log(message)
+        settings_errors.append(message)
 
     settings = load_settings(settings_path) if settings_path else {}
     if settings is None:
-        log('WARN  size: settings file not found: %s (using defaults)' % settings_path)
+        slog('WARN  size: settings file not found: %s (using defaults)' % settings_path)
         settings = {}
-    enabled  = _get_bool(settings, 'ENABLED', DEFAULT_ENABLED, log)
+    enabled  = _get_bool(settings, 'ENABLED', DEFAULT_ENABLED, slog)
     max_str  = settings.get('MAX_SIZE', DEFAULT_MAX_SIZE)
-    min_keep = _get_int(settings, 'MIN_KEEP_FILES', DEFAULT_MIN_KEEP_FILES, log)
-    _warn_unknown(settings, ('ENABLED', 'MAX_SIZE', 'MIN_KEEP_FILES'), 'size', log)
+    min_keep = _get_int(settings, 'MIN_KEEP_FILES', DEFAULT_MIN_KEEP_FILES, slog)
+    _warn_unknown(settings, ('ENABLED', 'MAX_SIZE', 'MIN_KEEP_FILES'), 'size', slog)
 
     files = [] # [(path, size, ctime), ...]
     for dirpath, _dirnames, filenames in os.walk(version_dir):
@@ -137,7 +144,7 @@ def prune(version_dir, settings_path='', dry_run=False, log=None):
     try:
         max_bytes = parse_size(max_str)
     except ValueError as exc:
-        log('ERROR size: %s - no size pruning this run' % exc)
+        slog('ERROR size: %s - no size pruning this run' % exc)
         return 0, 0, total, len(files)
 
     deleted = freed = 0
