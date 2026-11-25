@@ -8,7 +8,7 @@ Covers not just Simple file versioning, but also a sane (actually configurable, 
 
 These modules (can be combined and) enable what Syncthing's builtin versioning doesn't have: **retention limits based on version-chain size or total size**, plus other time window and age and per-file version settings.
 
-[Edit] I'm happy that syncthing added a [trashcanMaxSize](https://github.com/syncthing/syncthing/commit/1107b3cd11dbe267a8b80bbe1f89fb86a070b5c3) setting after I answered this years long [ticket](https://github.com/syncthing/syncthing/issues/9581). It doesn't cover most of what I do here but it does at least mean we now get the maximum total version size number exposed on android as well! 👍
+[Edit] I'm happy that syncthing added a [trashcanMaxSize](https://github.com/syncthing/syncthing/commit/1107b3cd11dbe267a8b80bbe1f89fb86a070b5c3) setting after I answered this years long [ticket](https://github.com/syncthing/syncthing/issues/9581). It doesn't cover most of what I do here but it does at least mean we now get the maximum total version size number exposed on android as well (where we can't have external versioners)! 👍
 
 This repo is tweaked, tested, iterated, read-through, architected by [me](https://github.com/tdbe) but slopped using Qwen 3.8 Flash Next 180B a6B Q4. Provided for free as-is (it's what I'm using, especially for Signal backups ([see syncthing ticket](https://github.com/syncthing/syncthing/issues/9581))). It's only in charge of the .stversions subfolder(s) of your synced syncthing folder(s), and works even with Receive-Encrypted file versions.
 
